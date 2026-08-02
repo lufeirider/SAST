@@ -28,7 +28,8 @@ LANGUAGE_EXTENSIONS = {
     ".java": "java",
 }
 
-BATCH_SIZE = 500
+# Larger batches cut Neo4j round-trips on full-JDK imports (~10k+ files).
+BATCH_SIZE = 2000
 
 # Universal / meaningless static receivers: treat as "could be any type",
 # so CHA must NOT materialize CALLS/POINTS_TO edges to every subtype.

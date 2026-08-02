@@ -84,11 +84,25 @@ class Neo4jImporter:
         logger.info("Neo4j schema ensured")
 
     def clear_project(self, project: str) -> None:
+        """Delete project graph in batches (single DETACH DELETE OOMs on full JDK)."""
+        batch = 5000
         with self.driver.session(database=self.database) as session:
-            session.run(
-                "MATCH (n {project: $project}) DETACH DELETE n",
-                project=project,
-            )
+            while True:
+                result = session.run(
+                    """
+                    MATCH (n {project: $project})
+                    WITH n LIMIT $batch
+                    DETACH DELETE n
+                    RETURN count(*) AS deleted
+                    """,
+                    project=project,
+                    batch=batch,
+                )
+                deleted = result.single()["deleted"]
+                if deleted:
+                    logger.info("Cleared project=%s batch deleted=%d", project, deleted)
+                if deleted < batch:
+                    break
             session.run(
                 "MATCH (p:Project {name: $project}) DETACH DELETE p",
                 project=project,
@@ -115,12 +129,24 @@ class Neo4jImporter:
             result.call_site_count,
         )
 
-    def _run_batches(self, cypher: str, rows: list[dict], key: str = "rows") -> None:
+    def _run_batches(
+        self,
+        cypher: str,
+        rows: list[dict],
+        key: str = "rows",
+        label: str = "",
+    ) -> None:
         if not rows:
             return
+        total = len(rows)
+        tag = label or "rows"
         with self.driver.session(database=self.database) as session:
-            for i in range(0, len(rows), self.batch_size):
-                session.run(cypher, **{key: rows[i : i + self.batch_size]})
+            for i in range(0, total, self.batch_size):
+                chunk = rows[i : i + self.batch_size]
+                session.run(cypher, **{key: chunk})
+                done = min(i + self.batch_size, total)
+                if done == total or done % (self.batch_size * 5) == 0 or i == 0:
+                    logger.info("Neo4j import %s: %d/%d", tag, done, total)
 
     def _import_project(self, project: str) -> None:
         with self.driver.session(database=self.database) as session:
@@ -150,7 +176,7 @@ class Neo4jImporter:
             f.project = row.project
         MERGE (p)-[:HAS_FILE]->(f)
         """
-        self._run_batches(cypher, rows)
+        self._run_batches(cypher, rows, label="files")
 
     def _import_types(self, result: ParseResult) -> None:
         all_types = [t for f in result.files for t in f.types]
@@ -185,12 +211,11 @@ class Neo4jImporter:
             t.project = row.project
         MERGE (f)-[:DECLARES]->(t)
         """
-        self._run_batches(cypher, rows)
+        self._run_batches(cypher, rows, label="types")
 
     def _import_methods_fields_params(self, result: ParseResult) -> None:
         method_rows = []
         field_rows = []
-        param_rows = []
         serializable = build_serializable_set(
             [t for f in result.files for t in f.types]
         )
@@ -213,6 +238,7 @@ class Neo4jImporter:
                             "qn": m.qualified_name,
                             "name": m.name,
                             "return_type": m.return_type,
+                            # Keep param lists on Method; skip Parameter nodes (huge + unused).
                             "parameters": [f"{p.type_name} {p.name}" for p in m.parameters],
                             "param_names": [p.name for p in m.parameters],
                             "field_names": field_names,
@@ -228,17 +254,6 @@ class Neo4jImporter:
                             "project": result.project,
                         }
                     )
-                    for p in m.parameters:
-                        param_rows.append(
-                            {
-                                "method_qn": m.qualified_name,
-                                "key": f"{m.qualified_name}::{p.index}:{p.name}",
-                                "name": p.name,
-                                "type_name": p.type_name,
-                                "index": p.index,
-                                "project": result.project,
-                            }
-                        )
                 owner_ser = t.qualified_name in serializable
                 for fld in t.fields:
                     ser_write = (
@@ -296,19 +311,8 @@ class Neo4jImporter:
             f.project = row.project
         MERGE (t)-[:HAS_FIELD]->(f)
         """
-        param_cypher = """
-        UNWIND $rows AS row
-        MATCH (m:Method {qualified_name: row.method_qn})
-        MERGE (p:Parameter {key: row.key})
-        SET p.name = row.name,
-            p.type_name = row.type_name,
-            p.index = row.index,
-            p.project = row.project
-        MERGE (m)-[:HAS_PARAM]->(p)
-        """
-        self._run_batches(method_cypher, method_rows)
-        self._run_batches(field_cypher, field_rows)
-        self._run_batches(param_cypher, param_rows)
+        self._run_batches(method_cypher, method_rows, label="methods")
+        self._run_batches(field_cypher, field_rows, label="fields")
 
     def _import_object_graph(self, result: ParseResult) -> None:
         """Field declared/points-to types + Type-MAY_REF-Type object aliases (CHA)."""
@@ -352,9 +356,9 @@ class Neo4jImporter:
             r.serializable_write = row.serializable_write,
             r.project = row.project
         """
-        self._run_batches(declared_cypher, declared)
-        self._run_batches(points_cypher, points)
-        self._run_batches(alias_cypher, uniq_alias)
+        self._run_batches(declared_cypher, declared, label="DECLARED_TYPE")
+        self._run_batches(points_cypher, points, label="POINTS_TO")
+        self._run_batches(alias_cypher, uniq_alias, label="MAY_REF")
         logger.info(
             "Object graph: fields=%d with_points=%d DECLARED_TYPE=%d "
             "POINTS_TO=%d MAY_REF=%d serializable_types=%d",
@@ -417,7 +421,7 @@ class Neo4jImporter:
             )
         )
         """
-        self._run_batches(cypher, rows)
+        self._run_batches(cypher, rows, label="inheritance")
 
     def _import_calls_and_sites(self, result: ParseResult) -> None:
         """Resolve CALLS using receiver / local types (not same-package name alone)."""
@@ -559,8 +563,8 @@ class Neo4jImporter:
         MATCH (callee:Method {qualified_name: row.target_qn})
         MERGE (cs)-[:RESOLVED_TO]->(callee)
         """
-        self._run_batches(call_cypher, uniq_calls)
-        self._run_batches(site_cypher, site_rows)
+        self._run_batches(call_cypher, uniq_calls, label="CALLS")
+        self._run_batches(site_cypher, site_rows, label="CallSites")
         logger.info(
             "CALLS edges=%d CallSites=%d", len(uniq_calls), len(site_rows)
         )
