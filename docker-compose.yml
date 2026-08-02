@@ -1,0 +1,3 @@
+# 本仓库不通过 compose 起 Neo4j。
+# 使用本机已按 README「Neo4j」一节搭建的实例（NEO4J_AUTH=none，7474/7687）。
+# 切勿再 docker compose up / docker run 占同一端口。

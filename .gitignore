@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Java / Maven / Gradle 构建产物
+**/target/
+*.class
+.gradle/
+out/
+bin/
+hs_err_pid*
+replay_pid*
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# 项目默认输入 JAR（体积大，本地自备）
+/target/
+
+# reverse / parse / analyze 运行时产物
+tmpwork/
+workspace/
+*_decompiled/
+.sast_meta
+*-sources.jar
+source_cache/
+
+# 分析报告 / IR 中间文件（若落在仓库根目录）
+*.enriched.json
+*_report.html
+*_report.json
+*_analyze.log
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# 日志与临时文件
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+.cache/
+tmp/
+temp/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/

@@ -1,0 +1,3 @@
+-r reverse/requirements.txt
+-r parse/requirements.txt
+-r analyze/requirements.txt
