@@ -7,39 +7,10 @@ from typing import Any, Iterable
 
 logger = logging.getLogger(__name__)
 
-# High-value gadget types to prefer in object-graph paths
-_ENTRY_HINTS = (
-    "AnnotationInvocationHandler",
-    "TiedMapEntry",
-    "LazyMap",
-    "HashMap",
-)
-_SINK_OWNER_HINTS = (
-    "InvokerTransformer",
-    "InstantiateTransformer",
-    "ChainedTransformer",
-    "ConstantTransformer",
-)
-
 
 def _score_field_path(types: list[str], fields: list[str]) -> int:
-    body = " ".join(types)
-    score = 0
-    if "AnnotationInvocationHandler" in body:
-        score += 80
-    if "LazyMap" in body:
-        score += 50
-    if "ChainedTransformer" in body:
-        score += 40
-    if "InvokerTransformer" in body:
-        score += 40
-    if "TiedMapEntry" in body:
-        score += 30
-    if any(f in {"memberValues", "factory", "iTransformers", "iTransformer"} for f in fields):
-        score += 35
-    # prefer serializable-write-heavy short paths — length penalty
-    score -= max(0, len(types) - 2) * 3
-    return score
+    """Shorter serializable paths rank higher (no class-name allowlist)."""
+    return -max(0, len(types) - 2) * 3 - len(fields)
 
 
 def query_field_paths(
@@ -55,16 +26,19 @@ def query_field_paths(
     """
     Find Type -MAY_REF*-> Type paths.
 
-    Default: prefer paths that touch classic gadget types; optionally restrict
-    to serializable_write edges (fields attacker can set via deserialization).
+    Prefer seeded entry/sink types from the analysis; otherwise fall back to
+    serializable types only (no gadget class-name hints).
     """
     assert store._driver
     depth = max(1, min(int(max_depth), 6))
     entries = sorted({q for q in (entry_type_qns or []) if q})
     sinks = sorted({q for q in (sink_type_qns or []) if q})
 
-    # Where clause fragments
-    ser = "AND ALL(r IN relationships(path) WHERE r.serializable_write = true)" if serializable_only else ""
+    ser = (
+        "AND ALL(r IN relationships(path) WHERE r.serializable_write = true)"
+        if serializable_only
+        else ""
+    )
 
     rows: list[dict] = []
     with store._driver.session(database=store.database) as session:
@@ -100,25 +74,18 @@ def query_field_paths(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Field-path query (seeded) failed: %s", exc)
         else:
-            # Heuristic: any path whose nodes mention classic names
             cypher = f"""
             MATCH (entry:Type {{project: $project}})
-            WHERE any(h IN $entry_hints WHERE entry.qualified_name CONTAINS h)
-               OR entry.is_serializable = true
+            WHERE coalesce(entry.is_serializable, false) = true
             MATCH path = (entry)-[:MAY_REF|CHA_REF*1..{depth}]->(sink:Type {{project: $project}})
             WHERE entry <> sink
-              AND (
-                any(h IN $sink_hints WHERE sink.qualified_name CONTAINS h)
-                OR sink.is_serializable = true
-              )
+              AND coalesce(sink.is_serializable, false) = true
             {ser}
             WITH entry, sink, path,
                  [n IN nodes(path) | n.qualified_name] AS type_chain,
                  [r IN relationships(path) | r.field] AS field_chain,
                  [r IN relationships(path) | r.field_key] AS field_keys,
                  [r IN relationships(path) | r.serializable_write] AS ser_flags
-            WHERE any(h IN $entry_hints WHERE any(t IN type_chain WHERE t CONTAINS h))
-              AND any(h IN $sink_hints WHERE any(t IN type_chain WHERE t CONTAINS h))
             RETURN DISTINCT type_chain, field_chain, field_keys, ser_flags,
                    entry.qualified_name AS entry_type,
                    sink.qualified_name AS sink_type,
@@ -130,12 +97,10 @@ def query_field_paths(
                 rows = session.run(
                     cypher,
                     project=project,
-                    entry_hints=list(_ENTRY_HINTS),
-                    sink_hints=list(_SINK_OWNER_HINTS),
                     limit=limit,
                 ).data()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Field-path query (heuristic) failed: %s", exc)
+                logger.warning("Field-path query (serializable) failed: %s", exc)
 
     out: list[dict[str, Any]] = []
     seen: set[tuple] = set()

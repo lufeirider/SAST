@@ -274,41 +274,13 @@ def enrich_report(report: dict[str, Any], app_root: Path | None = None) -> dict[
             }
         )
 
-    # Prefer gadget-relevant chains in the sidebar
+    # Prefer longer / reflection sinks in the sidebar (drop short noise)
     def _chain_rank(c: dict[str, Any]) -> tuple:
-        label = c.get("path_label") or ""
-        steps = list(c.get("call_chain") or [])
-        body = " ".join(steps)
-        score = 0
-        # Classic CC1 skeleton first
-        if (
-            len(steps) == 3
-            and "AnnotationInvocationHandler" in steps[0]
-            and "LazyMap#get" in steps[1]
-            and "InvokerTransformer#transform" in steps[2]
-        ):
-            score += 200
-            if "#invoke" in steps[0]:
-                score += 30
-        elif "AnnotationInvocationHandler" in body and "LazyMap" in body and "InvokerTransformer" in body:
-            score += 120
-        elif "AnnotationInvocationHandler" in body and "LazyMap" in body:
-            score += 90
-        elif "AnnotationInvocationHandler" in body:
-            score += 70
-        if "LazyMap.get" in label:
-            score += 40
-        if "TiedMapEntry" in label:
-            score += 25
-        if "ChainedTransformer" in label:
-            score += 30
-        if "InvokerTransformer" in label:
-            score += 20
-        if "BeanMap" in label and "InvokerTransformer" not in body:
-            score -= 50
-        if (c.get("sink_vul") or "") == "REFLECTION":
-            score += 15
-        return (-score, len(steps))
+        from analyze.chains import _rank
+
+        return _rank(
+            {"call_chain": list(c.get("call_chain") or []), "sink_method": c.get("sink_method")}
+        )
 
     chains.sort(key=_chain_rank)
 

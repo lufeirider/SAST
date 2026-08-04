@@ -52,6 +52,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep parse_ir.json from JavaParseIr (before Python load)",
     )
     p.add_argument(
+        "--force-reparse",
+        action="store_true",
+        help="Ignore parse IR cache and re-run JavaParseIr",
+    )
+    p.add_argument(
+        "--parse-ir",
+        type=Path,
+        default=None,
+        help="Load this parse_ir.json instead of parsing sources",
+    )
+    p.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -67,11 +78,20 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
+    if args.parse_ir is not None:
+        reuse: bool | Path = args.parse_ir
+    elif args.force_reparse:
+        reuse = False
+    else:
+        reuse = True
+
     pipeline = ParsePipeline(project=args.project)
     try:
         if args.no_import:
             result = pipeline.parse(
-                args.input, keep_parse_ir_json=args.dump_parse_ir
+                args.input,
+                keep_parse_ir_json=args.dump_parse_ir,
+                reuse_parse_ir=reuse,
             )
             if args.dump_json:
                 pipeline.dump_json(result, args.dump_json)
@@ -81,6 +101,7 @@ def main(argv: list[str] | None = None) -> int:
                 clear=not args.no_clear,
                 dump_json=args.dump_json,
                 keep_parse_ir_json=args.dump_parse_ir,
+                reuse_parse_ir=reuse,
             )
     except Exception as exc:  # noqa: BLE001
         logging.error("%s", exc)

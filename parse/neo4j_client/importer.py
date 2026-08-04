@@ -19,6 +19,7 @@ from parse.config import (
     NEO4J_URI,
     NEO4J_USER,
     is_cha_no_expand,
+    is_universal_virtual_call,
 )
 from parse.models import MethodInfo, ParseResult, TypeInfo
 from parse.neo4j_client.schema import CONSTRAINTS, INDEXES
@@ -143,10 +144,10 @@ class Neo4jImporter:
         with self.driver.session(database=self.database) as session:
             for i in range(0, total, self.batch_size):
                 chunk = rows[i : i + self.batch_size]
-                session.run(cypher, **{key: chunk})
+                session.run(cypher, **{key: chunk}).consume()
                 done = min(i + self.batch_size, total)
-                if done == total or done % (self.batch_size * 5) == 0 or i == 0:
-                    logger.info("Neo4j import %s: %d/%d", tag, done, total)
+                # Log every batch so long phases don't look "stuck" after the first chunk.
+                logger.info("Neo4j import %s: %d/%d", tag, done, total)
 
     def _import_project(self, project: str) -> None:
         with self.driver.session(database=self.database) as session:
@@ -371,57 +372,96 @@ class Neo4jImporter:
         )
 
     def _import_inheritance(self, result: ParseResult) -> None:
-        rows = []
+        """Import EXTENDS/IMPLEMENTS by qualified_name (IR already symbol-resolved)."""
+        known_qns = {t.qualified_name for f in result.files for t in f.types}
+        # Rare unresolved parents are simple names; map name -> QNs for fallback.
+        simple_to_types: dict[str, list[str]] = defaultdict(list)
+        for qn in known_qns:
+            simple_to_types[self._simple_type(qn)].append(qn)
+
+        extends_real: list[dict] = []
+        implements_real: list[dict] = []
+        extends_stub: list[dict] = []
+        implements_stub: list[dict] = []
+
         for f in result.files:
             for t in f.types:
                 for parent in t.extends:
-                    rows.append(
-                        {
-                            "child": t.qualified_name,
-                            "parent_name": parent,
-                            "rel": "EXTENDS",
-                            "project": result.project,
-                        }
+                    parent_qn, is_stub = self._inheritance_parent_qn(
+                        parent, known_qns, simple_to_types, result.project
                     )
+                    row = {
+                        "child": t.qualified_name,
+                        "parent": parent_qn,
+                        "parent_name": self._simple_type(parent),
+                        "project": result.project,
+                    }
+                    (extends_stub if is_stub else extends_real).append(row)
                 for iface in t.implements:
-                    rows.append(
-                        {
-                            "child": t.qualified_name,
-                            "parent_name": iface,
-                            "rel": "IMPLEMENTS",
-                            "project": result.project,
-                        }
+                    parent_qn, is_stub = self._inheritance_parent_qn(
+                        iface, known_qns, simple_to_types, result.project
                     )
-        cypher = """
+                    row = {
+                        "child": t.qualified_name,
+                        "parent": parent_qn,
+                        "parent_name": self._simple_type(iface),
+                        "project": result.project,
+                    }
+                    (implements_stub if is_stub else implements_real).append(row)
+
+        real_cypher = """
         UNWIND $rows AS row
         MATCH (child:Type {qualified_name: row.child})
-        OPTIONAL MATCH (parent:Type {project: row.project})
-        WHERE parent.name = row.parent_name
-           OR parent.qualified_name = row.parent_name
-           OR parent.qualified_name ENDS WITH ('.' + row.parent_name)
-        WITH child, row, collect(parent)[0] AS resolved
-        FOREACH (_ IN CASE WHEN resolved IS NULL THEN [1] ELSE [] END |
-            MERGE (stub:Type {
-                qualified_name: row.project + '::stub::' + row.parent_name
-            })
-            SET stub.name = row.parent_name, stub.kind = 'stub', stub.project = row.project
-            FOREACH (__ IN CASE WHEN row.rel = 'EXTENDS' THEN [1] ELSE [] END |
-                MERGE (child)-[:EXTENDS]->(stub)
-            )
-            FOREACH (__ IN CASE WHEN row.rel = 'IMPLEMENTS' THEN [1] ELSE [] END |
-                MERGE (child)-[:IMPLEMENTS]->(stub)
-            )
-        )
-        FOREACH (_ IN CASE WHEN resolved IS NOT NULL THEN [1] ELSE [] END |
-            FOREACH (__ IN CASE WHEN row.rel = 'EXTENDS' THEN [1] ELSE [] END |
-                MERGE (child)-[:EXTENDS]->(resolved)
-            )
-            FOREACH (__ IN CASE WHEN row.rel = 'IMPLEMENTS' THEN [1] ELSE [] END |
-                MERGE (child)-[:IMPLEMENTS]->(resolved)
-            )
-        )
+        MATCH (parent:Type {qualified_name: row.parent})
+        MERGE (child)-[:__REL__]->(parent)
         """
-        self._run_batches(cypher, rows, label="inheritance")
+        stub_cypher = """
+        UNWIND $rows AS row
+        MATCH (child:Type {qualified_name: row.child})
+        MERGE (parent:Type {qualified_name: row.parent})
+        SET parent.name = row.parent_name,
+            parent.kind = 'stub',
+            parent.project = row.project
+        MERGE (child)-[:__REL__]->(parent)
+        """
+        self._run_batches(
+            real_cypher.replace("__REL__", "EXTENDS"),
+            extends_real,
+            label="inheritance EXTENDS",
+        )
+        self._run_batches(
+            real_cypher.replace("__REL__", "IMPLEMENTS"),
+            implements_real,
+            label="inheritance IMPLEMENTS",
+        )
+        self._run_batches(
+            stub_cypher.replace("__REL__", "EXTENDS"),
+            extends_stub,
+            label="inheritance EXTENDS stubs",
+        )
+        self._run_batches(
+            stub_cypher.replace("__REL__", "IMPLEMENTS"),
+            implements_stub,
+            label="inheritance IMPLEMENTS stubs",
+        )
+
+    @classmethod
+    def _inheritance_parent_qn(
+        cls,
+        parent: str,
+        known_qns: set[str],
+        simple_to_types: dict[str, list[str]],
+        project: str,
+    ) -> tuple[str, bool]:
+        """IR parents are FQNs from SymbolSolver; only unresolved names need fallback."""
+        if parent in known_qns:
+            return parent, False
+        # Unresolved / external type → stub (or rare simple-name fallback).
+        if "." not in parent:
+            cands = simple_to_types.get(parent, [])
+            if len(cands) == 1:
+                return cands[0], False
+        return f"{project}::stub::{parent}", True
 
     def _import_calls_and_sites(self, result: ParseResult) -> None:
         """Resolve CALLS using receiver / local types (not same-package name alone)."""
@@ -469,7 +509,10 @@ class Neo4jImporter:
                                 else ""
                             )
                             # Object / Serializable / … = any type → no CALLS edge
-                            if is_cha_no_expand(owner):
+                            # except gadget-relevant virtuals (toString/hashCode/…)
+                            if is_cha_no_expand(owner) and not is_universal_virtual_call(
+                                cs.resolved_qn
+                            ):
                                 targets = []
                             else:
                                 targets = [cs.resolved_qn]

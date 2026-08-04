@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
 from parse.config import LANGUAGE_EXTENSIONS, PREFER_APP_SOURCES, SKIP_DIR_NAMES
 from parse.models import FileInfo, ParseResult
-from parse.parsers.parse_ir import ParseIrLoader
+from parse.parsers.parse_ir import ParseIrLoader, fingerprint_java_tree
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +62,26 @@ def _discover_java_roots(java_files: list[Path], fallback_root: Path) -> list[Pa
     return sorted(roots)
 
 
+def _cache_paths(project_root: Path) -> tuple[Path, Path]:
+    cache_dir = project_root / ".cache"
+    return cache_dir / "parse_ir.json", cache_dir / "parse_ir.meta.json"
+
+
 def parse_directory(
     root: Path,
     project: str = "default",
     *,
     keep_parse_ir_json: Path | None = None,
+    reuse_parse_ir: bool | Path = True,
 ) -> ParseResult:
+    """
+    Parse Java sources under root.
+
+    reuse_parse_ir:
+      True  — use <project>/.cache/parse_ir.json when fingerprint matches
+      Path  — load that IR file directly (skip JavaParseIr)
+      False — always re-parse
+    """
     root = Path(root).resolve()
     if not root.exists():
         raise FileNotFoundError(root)
@@ -80,7 +95,6 @@ def parse_directory(
     files: list[FileInfo] = []
     if java_files:
         roots = _discover_java_roots(java_files, root)
-        # Dependency sources under reverse lib/ — SymbolSolver only, not emitted
         solver_roots: list[Path] = []
         for app in roots:
             lib = app.parent / "lib"
@@ -88,17 +102,67 @@ def parse_directory(
                 for child in sorted(p for p in lib.iterdir() if p.is_dir()):
                     solver_roots.append(child)
                 solver_roots.append(lib)
-        try:
-            files.extend(
-                ParseIrLoader().parse_roots(
-                    roots,
-                    solver_roots=solver_roots,
-                    keep_parse_ir_json=keep_parse_ir_json,
+
+        loader = ParseIrLoader()
+
+        # Direct IR path
+        if isinstance(reuse_parse_ir, Path):
+            ir_path = Path(reuse_parse_ir)
+            if not ir_path.is_file():
+                raise FileNotFoundError(ir_path)
+            logger.info("Loading parse IR from %s", ir_path)
+            files.extend(loader.load_parse_ir_json(ir_path))
+        else:
+            # Auto cache beside reverse project (tmpwork/cc_full/.cache/)
+            cache_hit = False
+            cache_ir: Path | None = None
+            cache_meta: Path | None = None
+            if len(roots) == 1:
+                proj = roots[0].parent
+                cache_ir, cache_meta = _cache_paths(proj)
+                fp = fingerprint_java_tree(roots[0])
+                if (
+                    reuse_parse_ir
+                    and cache_ir.is_file()
+                    and cache_meta.is_file()
+                ):
+                    try:
+                        meta = json.loads(cache_meta.read_text(encoding="utf-8"))
+                        if meta.get("fingerprint") == fp:
+                            logger.info(
+                                "Parse IR cache hit (%s files) -> %s",
+                                meta.get("files"),
+                                cache_ir,
+                            )
+                            files.extend(loader.load_parse_ir_json(cache_ir))
+                            cache_hit = True
+                    except (OSError, json.JSONDecodeError) as exc:
+                        logger.warning("Parse IR cache unreadable: %s", exc)
+
+            if not cache_hit:
+                keep = keep_parse_ir_json
+                if keep is None and cache_ir is not None:
+                    keep = cache_ir
+                files.extend(
+                    loader.parse_roots(
+                        roots,
+                        solver_roots=solver_roots,
+                        keep_parse_ir_json=keep,
+                    )
                 )
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.error("ParseIrLoader failed: %s", exc)
-            raise
+                if cache_ir is not None and cache_meta is not None and keep == cache_ir:
+                    cache_meta.parent.mkdir(parents=True, exist_ok=True)
+                    cache_meta.write_text(
+                        json.dumps(
+                            {
+                                "fingerprint": fingerprint_java_tree(roots[0]),
+                                "files": len(files),
+                            },
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                    logger.info("Wrote parse IR cache meta -> %s", cache_meta)
 
     result = ParseResult(project=project, files=files)
     logger.info(

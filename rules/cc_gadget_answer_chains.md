@@ -133,7 +133,8 @@ Hashtable#readObject
 
 ## CC6+CC3
 
-**限制**：CommonsCollections 3.1–3.2.1（CC6 前半绕高版本 + CC3 后半绕 Invoker 黑名单）
+**限制**：CommonsCollections 3.1–3.2.1  
+**故意绕过**：CC6 前半（`HashMap` + `TiedMapEntry`）绕高版本 AIH；后半用 `InstantiateTransformer` 替代 `InvokerTransformer`，绕 Invoker 黑名单。答案停在 Instantiate（不要求再接到 TrAX/Templates）。
 
 ```
 HashMap#readObject
@@ -142,8 +143,4 @@ HashMap#readObject
 → LazyMap#get
 → ChainedTransformer#transform
 → InstantiateTransformer#transform
-→ TrAXFilter#<init>
-→ TemplatesImpl#newTransformer
-→ defineClass
-→ newInstance
 ```

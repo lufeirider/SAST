@@ -15,7 +15,12 @@ from analyze.config import (
     NEO4J_URI,
     NEO4J_USER,
 )
-from analyze.chains import compress_call_chains
+from analyze.chains import (
+    annotate_chains_with_skeleton,
+    compress_call_chains,
+    summarize_gadget_skeletons,
+)
+from analyze.dynamic_cha_chains import DynamicChaChainFinder
 from analyze.taint import TaintFinding
 
 logger = logging.getLogger(__name__)
@@ -115,107 +120,109 @@ class FindingStore:
         logger.info("Saved %d findings for project=%s", len(rows), project)
         return len(rows)
 
+    def _entry_qns(self, session, project: str) -> list[str]:
+        """Deserialization entries only: readObject / readExternal → sinks."""
+        rows = session.run(
+            """
+            MATCH (t:Type {project:$p})-[:HAS_METHOD]->(m:Method {project:$p})
+            WHERE m.name IN ['readObject', 'readExternal']
+            RETURN DISTINCT m.qualified_name AS qn
+            ORDER BY m.qualified_name
+            """,
+            p=project,
+        ).data()
+        return [r["qn"] for r in rows if r.get("qn")]
+
     def query_call_chains_to_methods(
         self,
         project: str,
         method_qns: Iterable[str],
         *,
-        max_depth: int = 5,
+        max_depth: int = 7,
         batch_size: int = 25,
         per_batch_limit: int = 400,
+        focus_type_qns: Iterable[str] | None = None,
     ) -> list[dict]:
         """
-        For confirmed exploitable methods, find CALLS paths that reach them.
+        Find CALLS paths from entry methods → confirmed sinks with on-demand CHA.
 
-        Only these targets are queried (not every Tabby CallSite) — cheaper and
-        matches: sink → taint-confirmed → then stitch callers.
+        Reflective Method#invoke / Constructor#newInstance use meet-in-the-middle
+        stitch at stitch_mids (entry→stitch_mid + dangerous-target→sink).
         """
         assert self._driver
         qns = sorted({q for q in method_qns if q})
         if not qns:
             return []
 
-        # depth baked into query string (neo4j param not allowed in *range*)
         depth = max(1, min(int(max_depth), 8))
-        # Per-target query: a shared LIMIT across many sinks lets BeanMap CHA
-        # noise starve classic AIH→LazyMap→Invoker (3 hops).
-        cypher = f"""
-        MATCH (sink:Method {{project: $project, qualified_name: $qn}})
-        MATCH path = (entry:Method {{project: $project}})-[:CALLS|CHA_CALLS*1..{depth}]->(sink)
-        WITH sink, [n IN nodes(path) | n.qualified_name] AS call_chain
-        WITH sink, call_chain, size(call_chain) AS hops,
-          CASE
-            WHEN any(x IN call_chain WHERE x CONTAINS 'AnnotationInvocationHandler')
-             AND any(x IN call_chain WHERE x CONTAINS 'LazyMap')
-             AND any(x IN call_chain WHERE x CONTAINS 'InvokerTransformer') THEN 0
-            WHEN any(x IN call_chain WHERE x CONTAINS 'AnnotationInvocationHandler')
-             AND any(x IN call_chain WHERE x CONTAINS 'LazyMap') THEN 1
-            WHEN any(x IN call_chain WHERE x CONTAINS 'AnnotationInvocationHandler') THEN 2
-            WHEN any(x IN call_chain WHERE x CONTAINS 'TiedMapEntry')
-             AND any(x IN call_chain WHERE x CONTAINS 'LazyMap') THEN 3
-            WHEN any(x IN call_chain WHERE x CONTAINS 'LazyMap') THEN 4
-            WHEN any(x IN call_chain WHERE x CONTAINS 'ChainedTransformer') THEN 5
-            WHEN any(x IN call_chain WHERE x CONTAINS 'BeanMap') THEN 20
-            ELSE 10
-          END AS prio
-        RETURN DISTINCT
-          sink.qualified_name AS sink_method,
-          call_chain AS call_chain,
-          hops,
-          prio
-        ORDER BY prio ASC, hops ASC
-        LIMIT $limit
-        """
+        _ = batch_size, per_batch_limit  # kept for API compat
 
-        per_target_limit = max(40, min(120, per_batch_limit))
-        raw: list[dict] = []
         with self._driver.session(database=self.database) as session:
-            for qn in qns:
-                try:
-                    rows = session.run(
-                        cypher,
-                        project=project,
-                        qn=qn,
-                        limit=per_target_limit,
-                    ).data()
-                    raw.extend(rows)
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("Call-chain query failed for %s: %s", qn, exc)
+            path_entries = self._entry_qns(session, project)
+            # Drop entries that are themselves the queried sinks
+            sink_set = set(qns)
+            path_entries = [e for e in path_entries if e not in sink_set]
+            from analyze.chains import _entry_score
 
-        # drop cycles + attach placeholder fields
+            path_entries.sort(key=lambda q: (-_entry_score(q), q))
+            logger.info(
+                "Chain query (dynamic CHA): %d sinks, %d entries, depth=%d",
+                len(qns),
+                len(path_entries),
+                depth,
+            )
+            finder = DynamicChaChainFinder(
+                session,
+                project,
+                focus_type_qns=focus_type_qns,
+            )
+            raw = finder.find_chains(
+                path_entries,
+                qns,
+                max_depth=depth,
+                max_paths_per_sink=0,
+            )
+
         cleaned: list[dict] = []
         for row in raw:
             ch = list(row.get("call_chain") or [])
             if len(ch) < 2 or len(ch) != len(set(ch)):
                 continue
-            row = {
-                **row,
-                "call_chain": ch,
-                "sink": row.get("sink") or "",
-                "sink_line": row.get("sink_line") or 0,
-                "sink_vul": row.get("sink_vul") or "",
-                "sink_owner": row.get("sink_owner") or "",
-            }
-            cleaned.append(row)
+            cleaned.append(
+                {
+                    **row,
+                    "call_chain": ch,
+                    "sink": row.get("sink") or "",
+                    "sink_line": row.get("sink_line") or 0,
+                    "sink_vul": row.get("sink_vul") or "",
+                    "sink_owner": row.get("sink_owner") or "",
+                }
+            )
 
-        # Compress per target method so noisy sinks don't starve others
         by_target: dict[str, list[dict]] = {}
         for row in cleaned:
             by_target.setdefault(str(row.get("sink_method") or ""), []).append(row)
 
         out: list[dict] = []
-        per_target = 12
         for target, rows in by_target.items():
             if not target:
                 continue
-            out.extend(
-                compress_call_chains(rows, min_hops=2, max_chains=per_target)
-            )
+            out.extend(compress_call_chains(rows, min_hops=2, max_chains=0))
+        out = annotate_chains_with_skeleton(out)
+        summary = summarize_gadget_skeletons(out)
         logger.info(
             "Call chains to %d confirmed methods: %d raw → %d acyclic → %d compressed",
             len(qns),
             len(raw),
             len(cleaned),
             len(out),
+        )
+        logger.info(
+            "Gadget skeletons: unique=%d known=%d novel=%d noise=%d (from %d chains)",
+            summary["unique"],
+            summary["counts"]["known"],
+            summary["counts"]["novel"],
+            summary["counts"]["noise"],
+            summary["raw"],
         )
         return out

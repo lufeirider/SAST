@@ -2,11 +2,13 @@
 Simple intra-procedural taint analysis.
 
 Modes (see analyze.config.TAINT_MODE):
-  - vuln:   找漏洞 — source = 方法参数（入口输入）；不把类字段默认当污点
-  - gadget: 找 gadget — source = 类字段（反序列化可控）+ readObject 入口
+  - vuln:   找漏洞 — source = 方法参数；不把类字段默认当污点
+  - gadget: 找 gadget — source = 类字段 + 方法参数
 
-Sinks: Tabby rules/sinks.json (class + method, prefer CallSite.resolved_qn)
-Propagation: assignment relationship only
+Propagation: assignment only — if any tainted ident appears on the RHS
+  (e.g. x1 = xxx + x2), the LHS becomes tainted.
+
+Docs: docs/taint.md
 """
 
 from __future__ import annotations
@@ -139,13 +141,13 @@ def _seed_sources(
             tainted.add(p)
             source_of[p] = "param"
     else:
+        # gadget: class fields + method parameters are both sources
         for f in type_info.fields:
             tainted.add(f.name)
             source_of[f.name] = "field"
-        if is_gadget_entry_method(method.name):
-            for p in param_names:
-                tainted.add(p)
-                source_of[p] = "param"
+        for p in param_names:
+            tainted.add(p)
+            source_of[p] = "param"
 
     return tainted, source_of
 
@@ -186,7 +188,7 @@ def _polluted_hits(
                     hits.append(arg)
 
     # gadget: field names often appear in args beyond Tabby's polluted index
-    # (e.g. InvokerTransformer: method.invoke(input, iArgs))
+    # (e.g. Method.invoke(input, iArgs) with field-sourced Method name)
     if not hits and mode == "gadget":
         blob_parts = [cs.receiver or "", *cs.arguments]
         blob = " ".join(blob_parts)
@@ -195,16 +197,13 @@ def _polluted_hits(
     return hits
 
 
-def analyze_method(
+def propagate_taint(
     type_info: TypeInfo,
     method: MethodInfo,
     *,
     mode: TaintMode = "vuln",
-) -> list[TaintFinding]:
-    """Run simple assignment-based taint on one method; report sink hits."""
-    field_names = {f.name for f in type_info.fields}
-    param_names = {p.name for p in method.parameters}
-
+) -> tuple[set[str], dict[str, str], list[str]]:
+    """Assignment-only intra-proc taint. Returns (tainted, source_of, evidence)."""
     tainted, source_of = _seed_sources(type_info, method, mode)
     evidence: list[str] = []
 
@@ -230,6 +229,20 @@ def analyze_method(
                 )
                 evidence.append(f"L{a.line}: {a.lhs} = {a.rhs}")
                 changed = True
+    return tainted, source_of, evidence
+
+
+def analyze_method(
+    type_info: TypeInfo,
+    method: MethodInfo,
+    *,
+    mode: TaintMode = "vuln",
+) -> list[TaintFinding]:
+    """Run simple assignment-based taint on one method; report sink hits."""
+    field_names = {f.name for f in type_info.fields}
+    param_names = {p.name for p in method.parameters}
+
+    tainted, source_of, evidence = propagate_taint(type_info, method, mode=mode)
 
     findings: list[TaintFinding] = []
 

@@ -5,11 +5,13 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.InitializerDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -142,7 +144,7 @@ public final class JavaParseIr {
 
         List<Map<String, Object>> types = new ArrayList<>();
         for (TypeDeclaration<?> td : cu.getTypes()) {
-            types.add(extractType(td, pkg, file.toString()));
+            collectTypes(td, pkg, file.toString(), types);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -154,6 +156,21 @@ public final class JavaParseIr {
         return out;
     }
 
+    /** Top-level + nested classes/interfaces/enums (needed for Map.Entry / MapEntry gadgets). */
+    private static void collectTypes(
+            TypeDeclaration<?> td, String pkg, String filePath, List<Map<String, Object>> out) {
+        out.add(extractType(td, pkg, filePath));
+        for (TypeDeclaration<?> nested : td.findAll(TypeDeclaration.class)) {
+            if (nested == td) {
+                continue;
+            }
+            // only direct nested members (avoid double-walk of deeper nests via findAll)
+            if (nested.getParentNode().isPresent() && nested.getParentNode().get() == td) {
+                collectTypes(nested, pkg, filePath, out);
+            }
+        }
+    }
+
     private static Map<String, Object> extractType(TypeDeclaration<?> td, String pkg, String filePath) {
         String name = td.getNameAsString();
         String qn = pkg.isEmpty() ? name : pkg + "." + name;
@@ -161,7 +178,17 @@ public final class JavaParseIr {
             ResolvedReferenceTypeDeclaration resolved = td.resolve();
             qn = resolved.getQualifiedName();
         } catch (Exception ignored) {
-            // keep syntactic qn
+            // Nested types: Outer.Inner when resolve fails
+            if (td.isNestedType()) {
+                List<String> parts = new ArrayList<>();
+                Node cur = td;
+                while (cur instanceof TypeDeclaration<?> tdn) {
+                    parts.add(0, tdn.getNameAsString());
+                    cur = cur.getParentNode().orElse(null);
+                }
+                String nested = String.join(".", parts);
+                qn = pkg.isEmpty() ? nested : pkg + "." + nested;
+            }
         }
 
         String kind = "class";
@@ -218,6 +245,12 @@ public final class JavaParseIr {
         for (ConstructorDeclaration cd : td.getConstructors()) {
             methods.add(extractCallable(cd, qn));
         }
+        // Static initializers hold Class.forName / getMethod constants used by reflection.
+        for (BodyDeclaration<?> member : td.getMembers()) {
+            if (member instanceof InitializerDeclaration init && init.isStatic()) {
+                methods.add(extractStaticInitializer(init, qn));
+            }
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", name);
@@ -231,6 +264,65 @@ public final class JavaParseIr {
         out.put("fields", fields);
         out.put("start_line", lineOf(td));
         out.put("end_line", endLineOf(td));
+        return out;
+    }
+
+    private static Map<String, Object> extractStaticInitializer(
+            InitializerDeclaration init, String ownerQn) {
+        String methodQn = ownerQn + "#<clinit>()";
+        List<Map<String, Object>> callSites = new ArrayList<>();
+        List<String> calls = new ArrayList<>();
+        Set<String> seenCalls = new LinkedHashSet<>();
+
+        for (MethodCallExpr call : init.findAll(MethodCallExpr.class)) {
+            Map<String, Object> cs = extractMethodCall(call);
+            callSites.add(cs);
+            String key = String.valueOf(cs.get("callee_name"));
+            String resolved = String.valueOf(cs.getOrDefault("resolved_qn", ""));
+            if (!resolved.isEmpty() && !"null".equals(resolved)) {
+                key = resolved;
+            }
+            if (seenCalls.add(key)) {
+                calls.add(String.valueOf(cs.get("callee_name")));
+            }
+        }
+        for (ObjectCreationExpr oc : init.findAll(ObjectCreationExpr.class)) {
+            Map<String, Object> cs = extractCtorCall(oc);
+            callSites.add(cs);
+            String key = String.valueOf(cs.get("callee_name"));
+            if (seenCalls.add(key)) {
+                calls.add(key);
+            }
+        }
+
+        List<Map<String, Object>> assignments = new ArrayList<>();
+        for (VariableDeclarator v : init.findAll(VariableDeclarator.class)) {
+            if (v.getInitializer().isEmpty()) continue;
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("lhs", v.getNameAsString());
+            a.put("rhs", v.getInitializer().get().toString());
+            a.put("line", lineOf(v));
+            assignments.add(a);
+        }
+        for (AssignExpr ae : init.findAll(AssignExpr.class)) {
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("lhs", normalizeLhs(ae.getTarget().toString()));
+            a.put("rhs", ae.getValue().toString());
+            a.put("line", lineOf(ae));
+            assignments.add(a);
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("name", "<clinit>");
+        out.put("qualified_name", methodQn);
+        out.put("return_type", "void");
+        out.put("is_constructor", false);
+        out.put("parameters", List.of());
+        out.put("call_sites", callSites);
+        out.put("calls", calls);
+        out.put("assignments", assignments);
+        out.put("start_line", lineOf(init));
+        out.put("end_line", endLineOf(init));
         return out;
     }
 

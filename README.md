@@ -18,20 +18,22 @@ sast/
 
 ```bash
 docker run -d \
+    --name sast-neo4j \
     --publish=7474:7474 \
     --publish=7687:7687 \
-    -m 12G \
-    -e NEO4J_server_memory_heap_max__size=4096m \
-    -e NEO4J_server_memory_pagecache_size=4096m \
+    -m 6G \
+    -e NEO4J_server_memory_heap_initial__size=512m \
+    -e NEO4J_server_memory_heap_max__size=2G \
+    -e NEO4J_server_memory_pagecache_size=1G \
+    -e NEO4J_server_memory_transaction_total__max=2G \
+    -e NEO4J_server_config_strict__validation_enabled=false \
     -e NEO4J_ACCEPT_LICENSE_AGREEMENT=yes \
-    -e NEO4J_apoc_export_file_enabled=true \
-    -e NEO4J_apoc_import_file_enabled=true \
-    -e NEO4J_apoc_import_file_use__neo4j__config=true \
-    -e NEO4J_PLUGINS='["apoc", "apoc-extended"]' \
+    -e NEO4J_PLUGINS='["apoc"]' \
     -e NEO4J_AUTH=none \
     neo4j:2026.05.0-enterprise
 ```
 
+> Docker Desktop 内存约 8G 时不要用 heap 4G + pagecache 4G（会直接起不来）。
 容器停了用 `docker start <容器名>` 恢复即可。Browser: http://localhost:7474
 
 ## 快速开始
@@ -199,44 +201,64 @@ RETURN f.sink_name, f.method_qn, f.sink_line, f.sink_arg, f.source_kind
 
 ### analyze 污点规则（简单，分模式）
 
+完整说明（gadget source / 赋值传播）：→ **[`docs/taint.md`](docs/taint.md)**
+
 | 模式 | CLI | Source | 额外规则 |
 |------|-----|--------|----------|
 | **vuln**（找漏洞） | `--mode vuln` | 方法**参数** | 不把类字段默认当污点；`readObject()` 调用仅当 receiver 已被参数污染才报 |
-| **gadget**（找 gadget） | `--mode gadget` | 类**字段**（+ `readObject` 的参数） | 方法名叫 `readObject` 视为反序列化入口；字段默认攻击者可控 |
+| **gadget**（找 gadget） | `--mode gadget` | **类字段** + **方法参数** | `readObject`/`readExternal` 为反序列化入口；字段默认攻击者可控 |
 
 - **Sink**：对齐 [Tabby `rules/sinks.json`](https://github.com/tabby-sec/tabby/tree/master/rules)（本地 `rules/sinks.json`）；按 **类 + 方法** 匹配，优先 `CallSite.resolved_qn`
-- **传播**：赋值关系（`x = source` / `x = xx + source` / RHS 含 source 标识符）
+- **传播**：赋值 RHS 出现污点标识符即污染 LHS（如 `x1 = xxx + x2`）
 - **分析流程（调用关系串起来）**：
   1. **A** 找调用了 Tabby sink 的方法（gadget 下 `readObject`/`readExternal` 入口也算）
   2. **B** 对这些方法做过程内污点 → 得到**确认可利用**的方法
-  3. **C** 只对确认方法，用 Neo4j `CALLS` 往上追调用链（不再对全部 sink CallSite 扫图）
+  3. **C** 只对确认方法查调用链：Entry → sink（动态 CHA + stitch_mid 双向拼接，见下节文档）
   4. **C2** 查字段对象图路径（`MAY_REF`，见下方 FAQ）
   5. **D** 对链上额外方法再做一轮污点（仍过程内）
 - 默认模式见 `analyze/config.py` 的 `TAINT_MODE`（当前 `vuln`）
 - `--no-import` 时只做 A+B，没有调用链 / 对象图
 
-### CommonsCollections + JDK8 联跑（gadget 示例）
+调用链算法说明（动态 CHA、stitch_mid、为何不做「全世界构造器」）：
 
-**速度优化布局**（推荐）：全量 JDK 放 `lib/` 只给 SymbolSolver；`app/` 只 emit CC + gadget 关键 JDK 类，避免 1 万+ 文件进图导致 Neo4j CHA 爆边。
+→ **[`docs/taint.md`](docs/taint.md)**（过程内污点）  
+→ **[`docs/dynamic_cha.md`](docs/dynamic_cha.md)**（动态 CHA 是什么，含 CC 例子）  
+→ **[`docs/call_chain_stitch.md`](docs/call_chain_stitch.md)**（总览）  
+→ **[`docs/stitch_mid.md`](docs/stitch_mid.md)**（反射 stitch_mid）  
+→ **[`docs/cha_virtual_mid.md`](docs/cha_virtual_mid.md)**（CHA / Object 过宽与 sink-reaching 夹逼）
+
+### CommonsCollections + JDK8 联跑（gadget 挖掘）
+
+**全量布局**（推荐挖新链）：CC3 + CC4 + 全量 JDK8 都进 `app/` 并写入 Neo4j。
 
 ```bash
-# 已准备 tmpwork/cc_full/（CC3.1 + CC4.0 + 全量 JDK8）
-# 若 app/ 又被铺成全量，先裁剪：
-python3 tmpwork/cc_full/rebuild_fast_layout.py
-#   app/      ≈600 文件（emit → Neo4j）
-#   lib/jdk8/ ≈12000 文件（solver-only）
+# 重建全量源码树（~1.2 万+ .java）
+python3 tmpwork/cc_full/rebuild_full_layout.py
+#   app/  = JDK8 + CC3 + CC4（全部 emit）
+#   lib/  = 空（不再把 JDK 藏成 solver-only）
 
+# 首次解析会分片并行 JavaParseIr，并缓存到 tmpwork/cc_full/.cache/parse_ir.json
+# 之后默认走缓存；改源码或 --force-reparse 才重解析
 python3 run_analyze.py \
   -i tmpwork/cc_full -p CC_FULL --mode gadget \
   --app-root tmpwork/cc_full/app \
   --dump-json tmpwork/cc_full_analyze_report.json \
   --report tmpwork/cc_full_analyze_report.html
+
+# 强制重解析
+python3 run_analyze.py -i tmpwork/cc_full -p CC_FULL --mode gadget --force-reparse ...
 ```
 
-**CHA 策略（分阶段）**：
-- **import**：只存精确边——`CALLS`→解析目标（如 `Map#get`），`MAY_REF`→声明类型；`Object` 等不画边；**不**做 Map→所有实现类扇出
-- **analyze**：按继承物化 `CHA_CALLS` / `CHA_REF`（优先 focus/gadget，有上限），查链走 `CALLS|CHA_CALLS`、`MAY_REF|CHA_REF`
-- 配置 `parse/config.py`；实现 `analyze/cha_expand.py`；JavaParseIr `-Xmx8g`
+**速度**：`PARSE_SHARD_WORKERS` / `JAVA_PARSE_XMX` / `BATCH_SIZE` 在 `parse/config.py`；
+分析阶段 CHA **按需**展开，链查询见 [`docs/call_chain_stitch.md`](docs/call_chain_stitch.md)。
+
+**`CHA_MAX_CALLEES = 100`（强烈注意）**：每个虚调用点做 CHA 时，**最多只保留 100 个**子类型/实现类上的同名方法（排序后截断）。  
+不是找全所有 CHA 类；候选多于 100 时后面的 override 仍会被裁掉。详见链文档第 2 节。
+
+**CHA / 反射策略**：
+- **import**：只存精确边——`CALLS`→解析目标（如 `Map#get`），`MAY_REF`→声明类型；**不**做 Map→所有实现类扇出，**不**物化全图 `CHA_CALLS`
+- **analyze 查链**：`CALLS` + 按需子类型 CHA（受 `CHA_MAX_CALLEES` 截断）；`Method#invoke` / `Constructor#newInstance` 在 **stitch_mid 上 A/B/C 拼接**（危险构造器由 sink 反向 + 逆 CHA 得到），避免「全世界构造器」爆炸
+- 配置 `parse/config.py`；实现 `analyze/dynamic_cha_chains.py`、`analyze/reflective.py`、`analyze/cha_expand.py`；JavaParseIr 默认 `-Xmx6g`（分片）
 
 较小联跑（仅 AIH 片段 + CC3）：`tmpwork/cc_jdk8/`。
 
@@ -246,6 +268,10 @@ python3 run_analyze.py \
 
 文本答案键（对照分析用）：[`rules/cc_gadget_answer_chains.md`](rules/cc_gadget_answer_chains.md)  
 来源：[Squirt1e — CC利用链总结](https://squirt1e.top/2021/12/25/cc-li-yong-lian-zong-jie/)
+
+查链算法（Entry→stitch_mid→危险目标→Sink）：[`docs/call_chain_stitch.md`](docs/call_chain_stitch.md)  
+动态 CHA 说明与 CC 例子：[`docs/dynamic_cha.md`](docs/dynamic_cha.md)  
+stitch_mid 白话说明与例子：[`docs/stitch_mid.md`](docs/stitch_mid.md)
 
 ### FAQ（设计问答摘要）
 
@@ -276,8 +302,12 @@ python3 run_analyze.py \
 
 **CHA = Class Hierarchy Analysis（类层次分析）**。
 
-遇到接口/父类上的虚调用或字段声明类型时，按 `EXTENDS` / `IMPLEMENTS` 把工程内所有子类/实现类都当成候选目标。  
-**在 import 阶段完成**（建 `CALLS` 虚调用边、建字段 `POINTS_TO` / `MAY_REF` 时都用）。
+遇到接口/父类上的虚调用或字段声明类型时，按 `EXTENDS` / `IMPLEMENTS` 把工程内子类/实现类当成候选目标。
+
+- **import**：一般**不**把 CHA 扇出写进 `CALLS`（只存精确解析边）
+- **analyze 查链**：在 BFS 时**按需**展开 override（动态 CHA，见 [`docs/dynamic_cha.md`](docs/dynamic_cha.md)）  
+  - **`CHA_MAX_CALLEES = 100`**：每个虚调用点最多只跟 **100** 个 CHA 目标（排序截断，不是找全）
+- **反射**：`invoke` / `newInstance` 用 **stitch_mid 双向拼接**；详见 [`docs/call_chain_stitch.md`](docs/call_chain_stitch.md)
 
 #### 继承关系有没有保存？和 Serializable 有什么关系？
 

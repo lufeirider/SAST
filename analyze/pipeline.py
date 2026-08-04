@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from analyze.cha_expand import materialize_cha_for_analysis
+from analyze.chain_taint import filter_chains_by_taint
 from analyze.config import TAINT_MODE
 from analyze.neo4j_store import FindingStore
 from analyze.object_graph import query_field_paths, seed_types_from_methods
@@ -57,6 +58,7 @@ class AnalyzePipeline:
         import_graph: bool = True,
         dump_json: Optional[Path] = None,
         mode: TaintMode | None = None,
+        reuse_parse_ir: bool | Path = True,
     ) -> dict:
         """
         Core flow (user-requested):
@@ -70,12 +72,20 @@ class AnalyzePipeline:
         parse_pipe = ParsePipeline(project=self.project)
         if parse_first:
             if import_graph:
-                result = parse_pipe.parse_and_import(input_dir or DEFAULT_INPUT)
+                result = parse_pipe.parse_and_import(
+                    input_dir or DEFAULT_INPUT,
+                    reuse_parse_ir=reuse_parse_ir,
+                )
             else:
-                result = parse_pipe.parse(input_dir or DEFAULT_INPUT)
+                result = parse_pipe.parse(
+                    input_dir or DEFAULT_INPUT,
+                    reuse_parse_ir=reuse_parse_ir,
+                )
         else:
-            result = parse_pipe.parse(input_dir or DEFAULT_INPUT)
-
+            result = parse_pipe.parse(
+                input_dir or DEFAULT_INPUT,
+                reuse_parse_ir=reuse_parse_ir,
+            )
         types = [t for f in result.files for t in f.types]
         known = {m.qualified_name for t in types for m in t.methods}
 
@@ -103,43 +113,85 @@ class AnalyzePipeline:
         call_chains: list[dict] = []
         field_paths: list[dict] = []
         chain_extra_qns: set[str] = set()
+        chain_taint_stats: dict = {}
         if import_graph and confirmed_qns:
             with FindingStore() as store:
                 # Step C0: analysis-time CHA (import stored precise edges only)
                 focus_types = seed_types_from_methods(sink_caller_qns | confirmed_qns)
-                for extra in (
-                    "sun.reflect.annotation.AnnotationInvocationHandler",
-                    "org.apache.commons.collections.map.LazyMap",
-                    "org.apache.commons.collections.keyvalue.TiedMapEntry",
-                    "org.apache.commons.collections.functors.ChainedTransformer",
-                    "org.apache.commons.collections.functors.InvokerTransformer",
-                    "org.apache.commons.collections.functors.ConstantTransformer",
-                    "org.apache.commons.collections.functors.InstantiateTransformer",
-                    "org.apache.commons.collections4.functors.InvokerTransformer",
-                    "org.apache.commons.collections4.comparators.TransformingComparator",
-                    "javax.management.BadAttributeValueExpException",
-                    "com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl",
-                ):
-                    if extra not in focus_types:
-                        focus_types.append(extra)
                 try:
+                    # CHA_CALLS not materialized — chain BFS expands on demand.
+                    # Still write CHA_REF for field/object-graph paths.
                     cha_stats = materialize_cha_for_analysis(
-                        store, self.project, focus_type_qns=focus_types
+                        store,
+                        self.project,
+                        focus_type_qns=focus_types,
+                        focus_method_qns=sink_caller_qns | confirmed_qns,
+                        expand_calls=False,
                     )
                     logger.info(
-                        "Step C0 — analysis CHA: CHA_CALLS=%s CHA_REF=%s",
-                        cha_stats.get("cha_calls"),
+                        "Step C0 — CHA_REF=%s (CHA_CALLS deferred to dynamic BFS)",
                         cha_stats.get("cha_refs"),
                     )
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Analysis CHA expand failed: %s", exc)
 
+                # On large graphs, keep reflection/exec confirmed sinks + common API sinks.
+                chain_targets = confirmed_qns
+                if len(confirmed_qns) > 200:
+                    api_preferred = {
+                        q
+                        for q in confirmed_qns
+                        if any(
+                            h in q
+                            for h in (
+                                "Method#invoke",
+                                "Constructor#newInstance",
+                                "defineClass",
+                                "defineTransletClasses",
+                                "newInstance",
+                                "Runtime#exec",
+                                "ProcessBuilder",
+                                "getOutputProperties",
+                                "newTransformer",
+                            )
+                        )
+                    }
+                    reflection_confirmed = {
+                        f.method_qn
+                        for f in findings
+                        if f.vul in {"REFLECTION", "EXEC", "JNDI"}
+                        and f.method_qn in confirmed_qns
+                    }
+                    preferred = api_preferred | reflection_confirmed
+                    if preferred:
+                        chain_targets = preferred
+                        logger.info(
+                            "Chain query scoped sinks: %d / %d confirmed",
+                            len(chain_targets),
+                            len(confirmed_qns),
+                        )
+
                 try:
                     call_chains = store.query_call_chains_to_methods(
-                        self.project, confirmed_qns
+                        self.project,
+                        chain_targets,
+                        focus_type_qns=focus_types,
                     )
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("Call-chain query failed: %s", exc)
+
+                # Step C1: preliminary hop taint filter (dataflow continuity)
+                if call_chains:
+                    before = len(call_chains)
+                    call_chains, chain_taint_stats = filter_chains_by_taint(
+                        call_chains, types, mode=taint_mode
+                    )
+                    logger.info(
+                        "Step C1 — chain taint filter: %d → %d (%s)",
+                        before,
+                        len(call_chains),
+                        chain_taint_stats,
+                    )
 
                 chain_extra_qns = method_qns_from_call_chains(call_chains) - confirmed_qns
                 chain_extra_qns &= known
@@ -154,49 +206,15 @@ class AnalyzePipeline:
                     entry_types = seed_types_from_methods(
                         q
                         for q in (sink_caller_qns | confirmed_qns)
-                        if any(
-                            h in q
-                            for h in (
-                                "AnnotationInvocationHandler",
-                                "TiedMapEntry",
-                                "LazyMap",
-                                "HashMap",
-                            )
-                        )
-                    )
-                    sink_types = seed_types_from_methods(confirmed_qns)
-                    for extra in focus_types:
-                        if any(
-                            h in extra
-                            for h in (
-                                "AnnotationInvocationHandler",
-                                "TiedMapEntry",
-                                "LazyMap",
-                                "HashMap",
-                                "BadAttribute",
-                            )
-                        ):
-                            if extra not in entry_types:
-                                entry_types.append(extra)
-                        if any(
-                            h in extra
-                            for h in (
-                                "InvokerTransformer",
-                                "ChainedTransformer",
-                                "InstantiateTransformer",
-                                "ConstantTransformer",
-                                "LazyMap",
-                                "TemplatesImpl",
-                            )
-                        ):
-                            if extra not in sink_types:
-                                sink_types.append(extra)
+                        if "#readObject" in q or "#readExternal" in q or "#invoke(" in q
+                    )[:80]
+                    sink_types = seed_types_from_methods(chain_targets)[:80]
                     field_paths = query_field_paths(
                         store,
                         self.project,
                         entry_type_qns=entry_types,
                         sink_type_qns=sink_types,
-                        max_depth=4,
+                        max_depth=3,
                         limit=80,
                         serializable_only=True,
                     )
@@ -204,7 +222,9 @@ class AnalyzePipeline:
                         field_paths = query_field_paths(
                             store,
                             self.project,
-                            max_depth=4,
+                            entry_type_qns=entry_types[:40],
+                            sink_type_qns=sink_types[:40],
+                            max_depth=3,
                             limit=80,
                             serializable_only=False,
                         )
@@ -276,8 +296,9 @@ class AnalyzePipeline:
             "flow": [
                 "A: find sink callers",
                 "B: taint-confirm exploitable",
-                "C0: analysis-time CHA (CHA_CALLS / CHA_REF)",
-                "C: stitch CALLS|CHA_CALLS chains to confirmed",
+                "C0: CHA_REF only; call CHA on-demand in chain BFS",
+                "C: dynamic CALLS+CHA BFS to confirmed",
+                "C1: chain hop taint continuity filter",
                 "C2: field/object-graph MAY_REF|CHA_REF paths",
                 "D: taint extra methods on those chains",
             ],
@@ -287,6 +308,7 @@ class AnalyzePipeline:
                 "chain_extra_methods": sorted(chain_extra_qns),
                 "analyzed_count": len(sink_caller_qns | chain_extra_qns),
             },
+            "chain_taint_filter": chain_taint_stats,
             "sink_users": sink_users,
             "findings": findings_payload,
             "call_chains_to_sinks": call_chains,

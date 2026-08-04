@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import os
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable
 
+from parse.config import (
+    JAVA_PARSE_XMX,
+    PARSE_SHARD_MIN_FILES,
+    PARSE_SHARD_WORKERS,
+)
 from parse.models import (
     AssignmentInfo,
     CallSite,
@@ -26,13 +34,30 @@ PARSE_IR_JAR = ROOT / "parse" / "tools" / "java-parse-ir.jar"
 LIBS_DIR = ROOT / "parse" / "tools" / "jp-libs"
 
 
+def fingerprint_java_tree(root: Path) -> str:
+    """Stable fingerprint of a Java source tree (paths + size + mtime)."""
+    root = Path(root).resolve()
+    h = hashlib.sha1()
+    for path in sorted(root.rglob("*.java")):
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        rel = path.relative_to(root).as_posix().encode()
+        h.update(rel)
+        h.update(str(st.st_size).encode())
+        h.update(str(int(st.st_mtime_ns)).encode())
+    return h.hexdigest()
+
+
 class ParseIrLoader:
     """Run JavaParseIr to emit parse_ir.json, then load into FileInfo trees."""
 
     language_key = "java"
 
-    def __init__(self, java_bin: str = "java"):
+    def __init__(self, java_bin: str = "java", xmx: str | None = None):
         self.java_bin = java_bin
+        self.xmx = xmx or JAVA_PARSE_XMX
         if not PARSE_IR_JAR.is_file():
             raise FileNotFoundError(
                 f"Missing {PARSE_IR_JAR}. Build with: "
@@ -45,12 +70,17 @@ class ParseIrLoader:
         jars = [str(PARSE_IR_JAR), *sorted(str(p) for p in LIBS_DIR.glob("*.jar"))]
         return ":".join(jars)
 
+    def load_parse_ir_json(self, path: Path) -> list[FileInfo]:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        return [self._to_file_info(f) for f in payload.get("files") or []]
+
     def parse_roots(
         self,
         roots: Iterable[Path],
         solver_roots: Iterable[Path] | None = None,
         *,
         keep_parse_ir_json: Path | None = None,
+        shard: bool = True,
     ) -> list[FileInfo]:
         root_list = [Path(r).resolve() for r in roots if Path(r).is_dir()]
         solver_list = [
@@ -61,6 +91,87 @@ class ParseIrLoader:
         if not root_list:
             return []
 
+        # Auto-shard large single roots (full JDK mining)
+        if shard and len(root_list) == 1:
+            only = root_list[0]
+            n_files = sum(1 for _ in only.rglob("*.java"))
+            children = sorted(
+                p for p in only.iterdir() if p.is_dir() and not p.name.startswith(".")
+            )
+            if n_files >= PARSE_SHARD_MIN_FILES and len(children) >= 2:
+                return self._parse_sharded(
+                    only,
+                    children,
+                    solver_list,
+                    keep_parse_ir_json=keep_parse_ir_json,
+                )
+
+        return self._parse_once(
+            root_list, solver_list, keep_parse_ir_json=keep_parse_ir_json
+        )
+
+    def _parse_sharded(
+        self,
+        full_root: Path,
+        children: list[Path],
+        extra_solver: list[Path],
+        *,
+        keep_parse_ir_json: Path | None,
+    ) -> list[FileInfo]:
+        # Solver sees the whole tree; each shard only emits one top-level package dir.
+        solver = [full_root, *extra_solver]
+        workers = max(1, min(PARSE_SHARD_WORKERS, len(children)))
+        logger.info(
+            "JavaParseIr sharded: %d package dirs, workers=%d xmx=%s root=%s",
+            len(children),
+            workers,
+            self.xmx,
+            full_root,
+        )
+
+        merged: list[FileInfo] = []
+        shard_payloads: list[dict] = []
+
+        def _one(child: Path) -> tuple[Path, list[FileInfo], dict]:
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+                out = Path(tmp.name)
+            files = self._parse_once(
+                [child], solver, keep_parse_ir_json=out, xmx=self.xmx
+            )
+            payload = json.loads(out.read_text(encoding="utf-8"))
+            out.unlink(missing_ok=True)
+            return child, files, payload
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futs = [pool.submit(_one, c) for c in children]
+            for fut in as_completed(futs):
+                child, files, payload = fut.result()
+                logger.info("  shard %s -> %d files", child.name, len(files))
+                merged.extend(files)
+                shard_payloads.append(payload)
+
+        if keep_parse_ir_json is not None:
+            out_path = Path(keep_parse_ir_json)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            all_files: list[dict] = []
+            for p in shard_payloads:
+                all_files.extend(p.get("files") or [])
+            out_path.write_text(
+                json.dumps({"files": all_files}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            logger.info("Kept merged parse_ir.json -> %s (%d files)", out_path, len(all_files))
+
+        return merged
+
+    def _parse_once(
+        self,
+        root_list: list[Path],
+        solver_list: list[Path],
+        *,
+        keep_parse_ir_json: Path | None = None,
+        xmx: str | None = None,
+    ) -> list[FileInfo]:
         if keep_parse_ir_json is not None:
             out_path = Path(keep_parse_ir_json)
             out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -68,13 +179,19 @@ class ParseIrLoader:
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
                 out_path = Path(tmp.name)
 
+        heap = xmx or self.xmx
+        if not str(heap).startswith("-Xmx"):
+            heap_arg = f"-Xmx{heap}"
+        else:
+            heap_arg = str(heap)
         cmd = [
             self.java_bin,
-            "-Xmx8g",
+            heap_arg,
             "-cp",
             self._classpath(),
             "sast.parse.JavaParseIr",
         ]
+
         for r in root_list:
             cmd.extend(["--root", str(r)])
         for r in solver_list:
@@ -82,15 +199,18 @@ class ParseIrLoader:
         cmd.extend(["--out", str(out_path)])
 
         logger.info(
-            "JavaParseIr roots=%s solver_roots=%s",
+            "JavaParseIr roots=%s solver_roots=%s %s",
             [str(r) for r in root_list],
             [str(r) for r in solver_list],
+            heap_arg,
         )
+        env = os.environ.copy()
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             check=False,
+            env=env,
         )
         if proc.returncode != 0:
             raise RuntimeError(
@@ -101,9 +221,11 @@ class ParseIrLoader:
                 logger.warning("%s", line)
 
         payload = json.loads(out_path.read_text(encoding="utf-8"))
+        # When caller passed keep_parse_ir_json for shard merge, leave file;
+        # for normal single-shot with keep=None, delete temp.
         if keep_parse_ir_json is None:
             out_path.unlink(missing_ok=True)
-        else:
+        elif keep_parse_ir_json is not None and Path(keep_parse_ir_json) == out_path:
             logger.info("Kept parse_ir.json -> %s", out_path)
         return [self._to_file_info(f) for f in payload.get("files") or []]
 
@@ -111,7 +233,7 @@ class ParseIrLoader:
         """Single-file entry (uses parent package root heuristics)."""
         path = Path(path).resolve()
         root = self._guess_source_root(path)
-        files = self.parse_roots([root])
+        files = self.parse_roots([root], shard=False)
         for f in files:
             if Path(f.path).resolve() == path:
                 return f

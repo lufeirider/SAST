@@ -24,10 +24,14 @@ class ParsePipeline:
         input_dir: Path | None = None,
         *,
         keep_parse_ir_json: Path | None = None,
+        reuse_parse_ir: bool | Path = True,
     ) -> ParseResult:
         root = Path(input_dir or DEFAULT_INPUT)
         return parse_directory(
-            root, project=self.project, keep_parse_ir_json=keep_parse_ir_json
+            root,
+            project=self.project,
+            keep_parse_ir_json=keep_parse_ir_json,
+            reuse_parse_ir=reuse_parse_ir,
         )
 
     def parse_and_import(
@@ -36,8 +40,13 @@ class ParsePipeline:
         clear: bool = True,
         dump_json: Optional[Path] = None,
         keep_parse_ir_json: Optional[Path] = None,
+        reuse_parse_ir: bool | Path = True,
     ) -> ParseResult:
-        result = self.parse(input_dir, keep_parse_ir_json=keep_parse_ir_json)
+        result = self.parse(
+            input_dir,
+            keep_parse_ir_json=keep_parse_ir_json,
+            reuse_parse_ir=reuse_parse_ir,
+        )
 
         if dump_json:
             self.dump_json(result, dump_json)

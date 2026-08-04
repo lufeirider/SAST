@@ -54,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Source root for snippets (default: tmpwork/*/app)",
     )
+    p.add_argument(
+        "--force-reparse",
+        action="store_true",
+        help="Ignore parse IR cache and re-run JavaParseIr",
+    )
+    p.add_argument(
+        "--parse-ir",
+        type=Path,
+        default=None,
+        help="Load this parse_ir.json instead of parsing sources",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     return p
 
@@ -65,6 +76,13 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
+    if args.parse_ir is not None:
+        reuse: bool | Path = args.parse_ir
+    elif args.force_reparse:
+        reuse = False
+    else:
+        reuse = True
+
     pipe = AnalyzePipeline(project=args.project, mode=args.mode)
     try:
         report = pipe.run(
@@ -73,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
             import_graph=not args.no_import,
             dump_json=args.dump_json,
             mode=args.mode,
+            reuse_parse_ir=reuse,
         )
     except Exception as exc:  # noqa: BLE001
         logging.error("%s", exc)
