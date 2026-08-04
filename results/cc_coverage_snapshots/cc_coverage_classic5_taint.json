@@ -1,0 +1,62 @@
+{
+  "elapsed_s": 24.2,
+  "chains_before": 17322,
+  "chains_after": 10742,
+  "filter_stats": {
+    "input": 17322,
+    "kept": 10742,
+    "dropped": 6580,
+    "drop_untainted_call": 6580
+  },
+  "coverage_before": 9,
+  "coverage_after": 9,
+  "dtsm_fp_ok": false,
+  "dtsm_fp_reason": "equals_literal_arg",
+  "patterns": {
+    "CC1-1": {
+      "before": 12,
+      "after": 12,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → TransformedMap#checkSetValue → InvokerTransformer#transform"
+    },
+    "CC1-2": {
+      "before": 165,
+      "after": 65,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → HashMap#get → HashMap#getNode → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    "CC2": {
+      "before": 102,
+      "after": 68,
+      "witness": "PriorityQueue#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#hashCode → CompositeType#hashCode → TreeMap#get → TreeMap#getEntry → TreeMap#getEntryUsingComparator → TransformingComparator#compare → InvokerTransformer#transform"
+    },
+    "CC3": {
+      "before": 1,
+      "after": 1,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    "CC4": {
+      "before": 926,
+      "after": 813,
+      "witness": "PriorityQueue#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#hashCode → CompositeType#hashCode → TreeMap#get → TreeMap#getEntry → TreeMap#getEntryUsingComparator → TransformingComparator#compare → InstantiateTransformer#transform"
+    },
+    "CC5": {
+      "before": 120,
+      "after": 96,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    "CC6": {
+      "before": 205,
+      "after": 133,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    "CC7": {
+      "before": 520,
+      "after": 350,
+      "witness": "Hashtable#readObject → HookGetFields#get → HookGetFields#defaulted → AbstractReferenceMap#containsKey → ListOrderedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    "CC6+CC3": {
+      "before": 2719,
+      "after": 2029,
+      "witness": "HashMap#readObject → HookGetFields#get → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform"
+    }
+  }
+}

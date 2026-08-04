@@ -1,0 +1,949 @@
+{
+  "mode": "all_entries_c1_taint",
+  "elapsed_s": 260.7,
+  "entries_total": 518,
+  "query_s": 125.2,
+  "chains_before": 1113539,
+  "chains_after": 428806,
+  "filter_stats": {
+    "input": 1113539,
+    "kept": 428806,
+    "dropped": 684733,
+    "drop_equals_literal_arg": 1239,
+    "drop_untainted_call": 683494
+  },
+  "coverage_before": 9,
+  "coverage_after": 9,
+  "coverage": {
+    "CC1-1": {
+      "before": 12,
+      "after": 12
+    },
+    "CC1-2": {
+      "before": 170,
+      "after": 70
+    },
+    "CC2": {
+      "before": 102,
+      "after": 68
+    },
+    "CC3": {
+      "before": 2,
+      "after": 2
+    },
+    "CC4": {
+      "before": 926,
+      "after": 813
+    },
+    "CC5": {
+      "before": 120,
+      "after": 96
+    },
+    "CC6": {
+      "before": 26454,
+      "after": 13121
+    },
+    "CC7": {
+      "before": 39636,
+      "after": 18881
+    },
+    "CC6+CC3": {
+      "before": 7949,
+      "after": 3736
+    }
+  },
+  "classify": {
+    "raw": 428806,
+    "unique": 13822,
+    "counts": {
+      "known": 3174,
+      "novel": 4614,
+      "noise": 6034
+    },
+    "known_as": {
+      "CC1-1": 3,
+      "CC1-2": 8,
+      "CC2": 4,
+      "CC3": 1,
+      "CC4": 3,
+      "CC5": 11,
+      "CC6": 1487,
+      "CC6+CC3": 23,
+      "CC7": 1634
+    }
+  },
+  "fp_probes": {
+    "dtsm_equals": {
+      "skeletons": 9,
+      "raw_chains": 1224,
+      "examples": [
+        "DefaultTreeSelectionModel#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+        "DefaultTreeSelectionModel#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer",
+        "DefaultTreeSelectionModel#readObject → Object#equals → TiedMapEntry → TemplatesImpl",
+        "DefaultTreeSelectionModel#readObject → Object#equals → TiedMapEntry → InvokerTransformer",
+        "DefaultTreeSelectionModel#readObject → Object#equals → TiedMapEntry → TrAXFilter → TemplatesImpl"
+      ]
+    },
+    "equals_tied_lazy": {
+      "skeletons": 571,
+      "raw_chains": 19588,
+      "examples": [
+        "ReferenceMap#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer",
+        "CaseInsensitiveMap#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer",
+        "HashedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer",
+        "LRUMap#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer",
+        "LinkedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer"
+      ]
+    },
+    "stream_iiop": {
+      "skeletons": 0,
+      "raw_chains": 0,
+      "examples": []
+    },
+    "pq_setValue": {
+      "skeletons": 0,
+      "raw_chains": 0,
+      "examples": []
+    }
+  },
+  "top_entries": [
+    [
+      "ReferenceMap#readObject",
+      5030
+    ],
+    [
+      "HashBag#readObject",
+      4690
+    ],
+    [
+      "TreeBag#readObject",
+      4690
+    ],
+    [
+      "Flat3Map#readObject",
+      4280
+    ],
+    [
+      "DualHashBidiMap#readObject",
+      4278
+    ],
+    [
+      "DualTreeBidiMap#readObject",
+      4278
+    ],
+    [
+      "CaseInsensitiveMap#readObject",
+      3967
+    ],
+    [
+      "HashedMap#readObject",
+      3967
+    ],
+    [
+      "LinkedMap#readObject",
+      3967
+    ],
+    [
+      "ReferenceIdentityMap#readObject",
+      3202
+    ],
+    [
+      "CardLayout#readObject",
+      3131
+    ],
+    [
+      "Inet6Address#readObject",
+      3006
+    ],
+    [
+      "URL#readObject",
+      2962
+    ],
+    [
+      "DragGestureEvent#readObject",
+      2833
+    ],
+    [
+      "ObjectName#readObject",
+      2815
+    ],
+    [
+      "LRUMap#readObject",
+      2787
+    ],
+    [
+      "RelationNotification#readObject",
+      2757
+    ],
+    [
+      "XPathException#readObject",
+      2753
+    ],
+    [
+      "SecureSet#readObject",
+      2726
+    ],
+    [
+      "DragGestureRecognizer#readObject",
+      2724
+    ]
+  ],
+  "cc6_other_top": [
+    {
+      "skeleton": "LazyMap#readObject → Object#equals → TiedMapEntry → InvokerTransformer",
+      "count": 48,
+      "witness": "LazyMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → SoftCache#get → BeanMap#put → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "LdapName#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "LdapName#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "ReferenceMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "ReferenceMap#readObject → HashMap#put → HashMap#putVal → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableSortedBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableSortedBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "AbstractSerializableListDecorator#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "AbstractSerializableListDecorator#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "DefaultedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "DefaultedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "FixedSizeMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "FixedSizeMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "FixedSizeSortedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "FixedSizeSortedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "LazyMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "LazyMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "ListOrderedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "ListOrderedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "PredicatedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "PredicatedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "TransformedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "TransformedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableOrderedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableOrderedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableSortedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableSortedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "AbstractSerializableSetDecorator#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "AbstractSerializableSetDecorator#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableSortedSet#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableSortedSet#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "skeleton": "LdapName#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "LdapName#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "UnmodifiableBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableSortedBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "UnmodifiableSortedBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "AbstractSerializableListDecorator#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "AbstractSerializableListDecorator#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "DefaultedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "DefaultedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "FixedSizeMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "FixedSizeMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "FixedSizeSortedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "FixedSizeSortedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "LazyMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "LazyMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "ListOrderedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "ListOrderedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "PredicatedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "PredicatedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "TransformedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "TransformedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "UnmodifiableMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 32,
+      "witness": "UnmodifiableMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    }
+  ],
+  "known_top": [
+    {
+      "known_as": "CC1-1",
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → checkSetValue → InvokerTransformer",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → TransformedMap#checkSetValue → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-1",
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → checkSetValue → InvokerTransformer → InstantiateTransformer",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → TransformedMap#checkSetValue → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC1-1",
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → checkSetValue → InvokerTransformer → TemplatesImpl",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → TransformedMap#checkSetValue → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Map#get → LazyMap → InvokerTransformer",
+      "count": 30,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → LazyMap → InvokerTransformer",
+      "count": 14,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Map#get → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 6,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Object#toString → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 6,
+      "witness": "AnnotationInvocationHandler#readObject → SequencedHashMap#entrySet → TextAndMnemonicHashMap#get → Object#toString → TiedMapEntry#toString → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Object#toString → LazyMap → InvokerTransformer",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → SequencedHashMap#entrySet → TextAndMnemonicHashMap#get → Object#toString → Hashtable#toString → PartialOrderIterator#next → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Map#get → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Map#get → TiedMapEntry → LazyMap → InvokerTransformer → TemplatesImpl",
+      "count": 4,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC1-2",
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → LazyMap → InvokerTransformer",
+      "count": 2,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → MapEntry#setValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC2",
+      "skeleton": "PriorityQueue#readObject → Comparator#compare → TransformingComparator → InvokerTransformer",
+      "count": 42,
+      "witness": "PriorityQueue#readObject → PriorityQueue#heapify → PriorityQueue#siftDown → PriorityQueue#siftDownUsingComparator → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC2",
+      "skeleton": "PriorityQueue#readObject → Comparator#compare → TransformingComparator → InvokerTransformer → InstantiateTransformer",
+      "count": 12,
+      "witness": "PriorityQueue#readObject → PriorityQueue#heapify → PriorityQueue#siftDown → PriorityQueue#siftDownUsingComparator → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC2",
+      "skeleton": "PriorityQueue#readObject → Comparator#compare → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 12,
+      "witness": "PriorityQueue#readObject → PriorityQueue#heapify → PriorityQueue#siftDown → PriorityQueue#siftDownUsingComparator → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC2",
+      "skeleton": "PriorityQueue#readObject → Object#hashCode → TransformingComparator → InvokerTransformer",
+      "count": 2,
+      "witness": "PriorityQueue#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#hashCode → CompositeType#hashCode → TreeMap#get → TreeMap#getEntry → TreeMap#getEntryUsingComparator → TransformingComparator#compare → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC3",
+      "skeleton": "AnnotationInvocationHandler#readObject → Map#get → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "AnnotationInvocationHandler#readObject → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC4",
+      "skeleton": "PriorityQueue#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer",
+      "count": 793,
+      "witness": "PriorityQueue#readObject → PriorityQueue#heapify → PriorityQueue#siftDown → PriorityQueue#siftDownUsingComparator → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC4",
+      "skeleton": "PriorityQueue#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 6,
+      "witness": "PriorityQueue#readObject → PriorityQueue#heapify → PriorityQueue#siftDown → PriorityQueue#siftDownUsingComparator → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC4",
+      "skeleton": "PriorityQueue#readObject → Object#hashCode → TransformingComparator → InstantiateTransformer",
+      "count": 2,
+      "witness": "PriorityQueue#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#hashCode → CompositeType#hashCode → TreeMap#get → TreeMap#getEntry → TreeMap#getEntryUsingComparator → TransformingComparator#compare → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry → InvokerTransformer",
+      "count": 18,
+      "witness": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry#toString → TiedMapEntry#getValue → SoftCache#get → BeanMap#put → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Map#get → TiedMapEntry → InvokerTransformer",
+      "count": 12,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → SoftCache#get → BeanMap#put → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 10,
+      "witness": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry#toString → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → HookGetFields#defaulted → Hashtable#containsKey → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Entry#setValue → TiedMapEntry → TransformingComparator → InvokerTransformer",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → HookGetFields#defaulted → AbstractMap#containsKey → FieldMap#entrySet → Entry#setValue → TiedMapEntry#setValue → TreeMap#put → TransformingComparator#compare → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry → LazyMap → InvokerTransformer → InstantiateTransformer",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry#toString → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Entry#setValue → TiedMapEntry → TransformingComparator → InvokerTransformer → InstantiateTransformer",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → HookGetFields#defaulted → AbstractMap#containsKey → FieldMap#entrySet → Entry#setValue → TiedMapEntry#setValue → TreeMap#put → TransformingComparator#compare → InvokerTransformer#transform → InstantiateTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry → LazyMap → InvokerTransformer → TemplatesImpl",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → Object#toString → TiedMapEntry#toString → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Entry#setValue → TiedMapEntry → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 8,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → HookGetFields#defaulted → AbstractMap#containsKey → FieldMap#entrySet → Entry#setValue → TiedMapEntry#setValue → TreeMap#put → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Object#hashCode → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 4,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → HookGetFields#defaulted → Hashtable#containsKey → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC5",
+      "skeleton": "BadAttributeValueExpException#readObject → Map#get → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 4,
+      "witness": "BadAttributeValueExpException#readObject → HookGetFields#get → Map#get → AbstractReferenceMap#get → TiedMapEntry#getValue → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "LazyMap#readObject → Object#equals → TiedMapEntry → InvokerTransformer",
+      "count": 48,
+      "witness": "LazyMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → SoftCache#get → BeanMap#put → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "LdapName#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "LdapName#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "ReferenceMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "ReferenceMap#readObject → HashMap#put → HashMap#putVal → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "UnmodifiableBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "UnmodifiableSortedBag#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "UnmodifiableSortedBag#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "AbstractSerializableListDecorator#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "AbstractSerializableListDecorator#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "DefaultedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "DefaultedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "FixedSizeMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "FixedSizeMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "FixedSizeSortedMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "FixedSizeSortedMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    },
+    {
+      "known_as": "CC6",
+      "skeleton": "LazyMap#readObject → Object#equals → TiedMapEntry → LazyMap → InvokerTransformer",
+      "count": 32,
+      "witness": "LazyMap#readObject → ObjectInputStream#readObject → ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InvokerTransformer#transform"
+    }
+  ],
+  "novel_top": [
+    {
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → LazyMap → InstantiateTransformer",
+      "count": 2,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → MapEntry#setValue → LazyMap#get → InstantiateTransformer#transform"
+    },
+    {
+      "skeleton": "AnnotationInvocationHandler#readObject → Entry#setValue → AbstractInputChecked → checkSetValue → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "AnnotationInvocationHandler#readObject → Entry#setValue → MapEntry#setValue → TransformedMap#checkSetValue → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualHashBidiMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "DualHashBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualTreeBidiMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "DualTreeBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "UnicastRef#readExternal → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "UnicastRef#readExternal → LiveRef#read → ConnectionInputStream#saveRef → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "UnicastRef2#readExternal → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "UnicastRef2#readExternal → LiveRef#read → ConnectionInputStream#saveRef → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "CSS#readObject → Object#hashCode → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "CSS#readObject → Hashtable#put → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "ChronoZonedDateTimeImpl#readExternal → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "ChronoZonedDateTimeImpl#readExternal → ZonedDateTime#withZoneSameLocal → ZonedDateTime#ofLocal → ZoneRules#getTransition → ZoneRules#getOffsetInfo → Object#equals → TiedMapEntry#equals → EnumMap#equals → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "ChronoZonedDateTimeImpl#readExternal → Object#hashCode → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "ChronoZonedDateTimeImpl#readExternal → ZonedDateTime#withZoneSameLocal → ZonedDateTime#ofLocal → SetUniqueList#contains → EntrySet#contains → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "JComponent#readObject → Object#hashCode → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "JComponent#readObject → Hashtable#put → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "JTable#readObject → Object#equals → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "JTable#readObject → JTable#createDefaultEditors → Hashtable#put → Object#equals → ReferenceEntry#equals → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "JTable#readObject → Object#hashCode → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "JTable#readObject → JTable#createDefaultEditors → Hashtable#put → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "ObjectInputStream#readObject → Object#hashCode → TiedMapEntry → LazyMap → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 1,
+      "witness": "ObjectInputStream#readObject → ValidationList#doCallbacks → ReadObjectCallback#validateObject → Hashtable#remove → Object#hashCode → TiedMapEntry#hashCode → TiedMapEntry#getValue → LazyMap#get → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "CertificateRevokedException#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "CertificateRevokedException#readObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualHashBidiMap#readObject → Comparator#compare → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 2,
+      "witness": "DualHashBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualHashBidiMap#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "DualHashBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualTreeBidiMap#readObject → Comparator#compare → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 2,
+      "witness": "DualTreeBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DualTreeBidiMap#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "DualTreeBidiMap#readObject → AbstractDualBidiMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "Flat3Map#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "Flat3Map#readObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "LRUMap#readExternal → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "LRUMap#readExternal → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "MBeanFeatureInfo#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "MBeanFeatureInfo#readObject → ImmutableDescriptor#ImmutableDescriptor → ImmutableDescriptor#makeMap → ImmutableDescriptor#makeMap → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "MBeanInfo#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "MBeanInfo#readObject → ImmutableDescriptor#ImmutableDescriptor → ImmutableDescriptor#makeMap → ImmutableDescriptor#makeMap → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "PriorityBlockingQueue#readObject → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "PriorityBlockingQueue#readObject → AbstractQueue#addAll → AbstractQueue#add → PriorityBlockingQueue#offer → PriorityBlockingQueue#siftUpUsingComparator → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "SequencedHashMap#readExternal → Comparator#compare → TransformingComparator → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "SequencedHashMap#readExternal → TreeMap#put → Comparator#compare → TransformingComparator#compare → ComparatorChain#compare → LazyIterator#next → Class#newInstance → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "UnicastRef#readExternal → Comparator#compare → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 2,
+      "witness": "UnicastRef#readExternal → LiveRef#read → ConnectionInputStream#saveRef → TreeMap#put → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "UnicastRef2#readExternal → Comparator#compare → TransformingComparator → InvokerTransformer → TemplatesImpl",
+      "count": 2,
+      "witness": "UnicastRef2#readExternal → LiveRef#read → ConnectionInputStream#saveRef → TreeMap#put → Comparator#compare → TransformingComparator#compare → InvokerTransformer#transform → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "BasicPermissionCollection#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "BasicPermissionCollection#readObject → AbstractMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "BeanContextServicesSupport#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "BeanContextServicesSupport#readObject → BeanContextSupport#deserialize → TreeSet#add → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "CaseInsensitiveMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "CaseInsensitiveMap#readObject → AbstractHashedMap#doReadObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "CursorableLinkedList#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "CursorableLinkedList#readObject → CursorableLinkedList#add → CursorableSubList#insertListable → CursorableLinkedList#broadcastListableInserted → PartialOrderIterator#next → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "DescriptorSupport#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "DescriptorSupport#readObject → AbstractMap#putAll → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "EventListenerList#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "EventListenerList#readObject → ReflectUtil#checkPackageAccess → AppletSecurity#checkPackageAccess → PartialOrderIterator#next → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "Frame#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "Frame#readObject → SetUniqueList#add → TreeSet#add → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "HashSet#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "HashSet#readObject → MultiHashMap#put → TreeSet#add → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "HashedMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "HashedMap#readObject → AbstractHashedMap#doReadObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "IdentityMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "IdentityMap#readObject → AbstractHashedMap#doReadObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "JFileChooser#readObject → Map#get → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "JFileChooser#readObject → JFileChooser#installShowFilesListener → Toolkit#getDesktopProperty → Map#get → LRUMap#get → TreeMap#put → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "LRUMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "LRUMap#readObject → LRUMap#doReadObject → AbstractHashedMap#doReadObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "LdapName#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "LdapName#readObject → LdapName#parse → DnParser#getDn → DnParser#parseRdn → Rdn#add → TypeAndValue#compareTo → String#compareToIgnoreCase → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    },
+    {
+      "skeleton": "LinkedMap#readObject → Comparator#compare → TransformingComparator → InstantiateTransformer → TrAXFilter → TemplatesImpl",
+      "count": 2,
+      "witness": "LinkedMap#readObject → AbstractHashedMap#doReadObject → TreeMap#put → Comparator#compare → TransformingComparator#compare → InstantiateTransformer#transform → TrAXFilter#TrAXFilter → TemplatesImpl#newTransformer → TemplatesImpl#getTransletInstance → TemplatesImpl#defineTransletClasses"
+    }
+  ],
+  "noise_top": [
+    {
+      "skeleton": "DualHashBidiMap#readObject → Entry#setValue → TiedMapEntry → InstantiateTransformer",
+      "count": 1080
+    },
+    {
+      "skeleton": "DualTreeBidiMap#readObject → Entry#setValue → TiedMapEntry → InstantiateTransformer",
+      "count": 1080
+    },
+    {
+      "skeleton": "SetFromMap#readObject → Entry#setValue → TiedMapEntry → InstantiateTransformer",
+      "count": 808
+    },
+    {
+      "skeleton": "AtomicReferenceArray#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "BatchUpdateException#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "BigDecimal#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "BigInteger#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "BitSet#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "DragGestureEvent#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "DragGestureRecognizer#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "DragSourceContext#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "DropTarget#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "File#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "InetAddress#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "InetSocketAddress#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "InvalidTargetObjectTypeException#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "JMXPrincipal#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "MBeanNotificationInfo#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "MBeanServerNotificationFilter#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "ModelMBeanInfoSupport#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "NumericValueExp#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "Random#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "RelationTypeSupport#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "Role#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "RoleInfo#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "RoleResult#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "RoleUnresolved#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "ScrollPane#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SecureSet#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SerialArray#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SerialBlob#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SerialClob#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SerialRef#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SerialStruct#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "SignedObject#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "StringBuffer#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "Subject#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "TemplatesImpl#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "URLPermission#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    },
+    {
+      "skeleton": "UnionToken#readObject → Object#equals → TiedMapEntry → InstantiateTransformer",
+      "count": 721
+    }
+  ]
+}
